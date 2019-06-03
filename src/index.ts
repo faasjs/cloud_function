@@ -34,29 +34,19 @@ export class CloudFunction implements Plugin {
     data.logger.debug('%o', data);
 
     // 克隆一份配置对象
-    const config = deepMerge(this.config);
+    let config;
 
-    // 若没有指定云资源名，则使用默认的云资源名
-    if (!config.name) {
-      config.name = data.config.plugins.defaults.function;
-    }
-
-    // 检查是否定义了云资源
-    if (!data.config.plugins[config.name]) {
-      throw Error(`Resource not found: ${config.name}`);
-    }
-
-    // 合并云资源配置项
-    if (!config.config) {
-      config.config = Object.create(null);
-    }
-    config.config = deepMerge(config.config, data.config.plugins[config.name].config);
-
-    // 添加服务商配置
-    if (!data.config.plugins[config.name].provider) {
-      throw Error(`Resource's provider is not defined: ${config.name}`);
+    if (!this.config.name) {
+      // 若没有指定配置名，则读取默认配置
+      config = deepMerge(data.config.plugins.defaults.function, this.config, { config: Object.create(null) });
     } else {
-      config.provider = data.config.plugins[config.name].provider;
+      // 检查配置是否存在
+      if (!data.config.plugins[this.config.name]) {
+        throw Error(`[faas.yaml] Plugin not found: ${this.config.name}`);
+      }
+
+      // 合并默认配置
+      config = deepMerge(data.config.plugins[this.config.name], this.config, { config: Object.create(null) });
     }
 
     data.logger.debug('[CloudFunction] 组装完成 %o', config);
