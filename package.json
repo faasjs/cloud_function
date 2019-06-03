@@ -1,6 +1,6 @@
 {
   "name": "@faasjs/cloud_function",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.0-alpha.2",
   "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -68,9 +68,6 @@
       "/lib/",
       "/tmp/",
       "/__tests__/"
-    ],
-    "setupFiles": [
-      "<rootDir>/src/__tests__/setup.ts"
     ]
   }
 }

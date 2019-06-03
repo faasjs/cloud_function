@@ -1,7 +1,7 @@
 import deepMerge from '@faasjs/deep_merge';
 import { Plugin, DeployData, Next } from '@faasjs/func';
 
-interface Config {
+export interface CloudFunctionConfig {
   name?: string;
   config?: {
     name?: string;
@@ -13,7 +13,7 @@ interface Config {
 
 export class CloudFunction implements Plugin {
   public readonly type: string;
-  private config: Config;
+  private config: CloudFunctionConfig;
 
   /**
    * 创建云函数配置
@@ -24,7 +24,7 @@ export class CloudFunction implements Plugin {
    * @param config.config.memorySize {number} 内存大小，单位为 MB
    * @param config.config.timeout {number} 最长执行时间，单位为 秒
    */
-  constructor (config: Config = Object.create(null)) {
+  constructor (config: CloudFunctionConfig = Object.create(null)) {
     this.type = 'function';
     this.config = config;
   }
@@ -38,11 +38,11 @@ export class CloudFunction implements Plugin {
 
     // 若没有指定云资源名，则使用默认的云资源名
     if (!config.name) {
-      config.name = data.config.resources.defaults.function;
+      config.name = data.config.plugins.defaults.function;
     }
 
     // 检查是否定义了云资源
-    if (!data.config.resources[config.name]) {
+    if (!data.config.plugins[config.name]) {
       throw Error(`Resource not found: ${config.name}`);
     }
 
@@ -50,13 +50,13 @@ export class CloudFunction implements Plugin {
     if (!config.config) {
       config.config = Object.create(null);
     }
-    config.config = deepMerge(config.config, data.config.resources[config.name].config);
+    config.config = deepMerge(config.config, data.config.plugins[config.name].config);
 
     // 添加服务商配置
-    if (!data.config.resources[config.name].provider) {
+    if (!data.config.plugins[config.name].provider) {
       throw Error(`Resource's provider is not defined: ${config.name}`);
     } else {
-      config.provider = data.config.resources[config.name].provider;
+      config.provider = data.config.plugins[config.name].provider;
     }
 
     data.logger.debug('[CloudFunction] 组装完成 %o', config);
