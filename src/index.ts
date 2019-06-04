@@ -33,7 +33,6 @@ export class CloudFunction implements Plugin {
     data.logger.debug('[CloudFunction] 组装云函数配置');
     data.logger.debug('%o', data);
 
-    // 克隆一份配置对象
     let config;
 
     if (!this.config.name) {
@@ -47,6 +46,15 @@ export class CloudFunction implements Plugin {
 
       // 合并默认配置
       config = deepMerge(data.config.plugins[this.config.name], this.config, { config: Object.create(null) });
+    }
+
+    // 注入所使用插件的配置项
+    config.pluginsConfig = Object.create(null);
+
+    for (const key in data.plugins) {
+      if (data.plugins.hasOwnProperty(key)) {
+        config.pluginsConfig[key as string] = data.config.plugins[key as string];
+      }
     }
 
     data.logger.debug('[CloudFunction] 组装完成 %o', config);
