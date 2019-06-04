@@ -13,7 +13,16 @@ export interface CloudFunctionConfig {
 
 export class CloudFunction implements Plugin {
   public readonly type: string;
-  private config: CloudFunctionConfig;
+  private config: {
+    name?: string;
+    type: string;
+    config: {
+      name?: string;
+      memorySize?: number;
+      timeout?: number;
+      [key: string]: any;
+    };
+  };
 
   /**
    * 创建云函数配置
@@ -26,38 +35,32 @@ export class CloudFunction implements Plugin {
    */
   constructor (config: CloudFunctionConfig = Object.create(null)) {
     this.type = 'function';
-    this.config = config;
+    this.config = Object.assign({
+      type: this.type,
+      config: Object.create(null)
+    }, config);
   }
 
   public async onDeploy (data: DeployData, next: Next) {
-    data.logger.debug('[CloudFunction] 组装云函数配置');
-    data.logger.debug('%o', data);
+    data.logger!.debug('[CloudFunction] 组装云函数配置');
+    data.logger!.debug('%o', data);
 
     let config;
 
     if (!this.config.name) {
       // 若没有指定配置名，则读取默认配置
-      config = deepMerge(data.config.plugins.defaults.function, this.config, { config: Object.create(null) });
+      config = deepMerge(data.config!.plugins.defaults.function, this.config, { config: Object.create(null) });
     } else {
       // 检查配置是否存在
-      if (!data.config.plugins[this.config.name]) {
+      if (!data.config!.plugins[this.config.name]) {
         throw Error(`[faas.yaml] Plugin not found: ${this.config.name}`);
       }
 
       // 合并默认配置
-      config = deepMerge(data.config.plugins[this.config.name], this.config, { config: Object.create(null) });
+      config = deepMerge(data.config!.plugins[this.config.name], this.config);
     }
 
-    // 注入所使用插件的配置项
-    config.pluginsConfig = Object.create(null);
-
-    for (const key in data.plugins) {
-      if (data.plugins.hasOwnProperty(key)) {
-        config.pluginsConfig[key as string] = data.config.plugins[key as string];
-      }
-    }
-
-    data.logger.debug('[CloudFunction] 组装完成 %o', config);
+    data.logger!.debug('[CloudFunction] 组装完成 %o', config);
 
     // 引用服务商部署插件
     // eslint-disable-next-line security/detect-non-literal-require, @typescript-eslint/no-var-requires
