@@ -7,6 +7,11 @@ export interface CloudFunctionConfig {
     name?: string;
     memorySize?: number;
     timeout?: number;
+    triggers?: {
+      type: string;
+      name: string;
+      value: string;
+    }[];
     [key: string]: any;
   };
 }
@@ -20,6 +25,11 @@ export class CloudFunction implements Plugin {
       name?: string;
       memorySize?: number;
       timeout?: number;
+      triggers?: {
+        type: string;
+        name: string;
+        value: string;
+      }[];
       [key: string]: any;
     };
   };
