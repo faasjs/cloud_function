@@ -89,6 +89,6 @@ export class CloudFunction implements Plugin {
       event: data,
       context: this.context
     };
-    return this.adapter.invokeFunction(name, context, options);
+    return this.adapter.invokeCloudFunction(name, context, options);
   }
 }
