@@ -1,5 +1,6 @@
 import deepMerge from '@faasjs/deep_merge';
-import { Plugin, DeployData, Next } from '@faasjs/func';
+import { Plugin, DeployData, Next, MountData, InvokeData } from '@faasjs/func';
+import { loadNpmVersion } from '@faasjs/load';
 
 export interface CloudFunctionConfig {
   name?: string;
@@ -18,21 +19,20 @@ export interface CloudFunctionConfig {
 
 export class CloudFunction implements Plugin {
   public readonly type: string;
+  public name?: string;
   private config: {
     name?: string;
-    type: string;
-    config: {
-      name?: string;
-      memorySize?: number;
-      timeout?: number;
-      triggers?: {
-        type: string;
-        name: string;
-        value: string;
-      }[];
-      [key: string]: any;
-    };
+    memorySize?: number;
+    timeout?: number;
+    triggers?: {
+      type: string;
+      name: string;
+      value: string;
+    }[];
+    [key: string]: any;
   };
+  private adapter?: any;
+  private context?: any;
 
   /**
    * 创建云函数配置
@@ -44,42 +44,51 @@ export class CloudFunction implements Plugin {
    * @param config.config.timeout {number} 最长执行时间，单位为 秒
    */
   constructor (config: CloudFunctionConfig = Object.create(null)) {
-    this.type = 'function';
-    this.config = Object.assign({
-      type: this.type,
-      config: Object.create(null)
-    }, config);
+    this.type = 'cloud_function';
+    this.name = config.name;
+    this.config = config.config || Object.create(null);
   }
 
   public async onDeploy (data: DeployData, next: Next) {
     data.logger!.debug('[CloudFunction] 组装云函数配置');
     data.logger!.debug('%o', data);
 
-    let config;
-
-    if (!this.config.name) {
-      // 若没有指定配置名，则读取默认配置
-      config = deepMerge(data.config!.plugins.defaults.function, this.config, { config: Object.create(null) });
-    } else {
-      // 检查配置是否存在
-      if (!data.config!.plugins[this.config.name]) {
-        throw Error(`[faas.yaml] Plugin not found: ${this.config.name}`);
-      }
-
-      // 合并默认配置
-      config = deepMerge(data.config!.plugins[this.config.name], this.config);
-    }
+    const config = deepMerge(data.config!.plugins![this.name || this.type], { config: this.config });
 
     data.logger!.debug('[CloudFunction] 组装完成 %o', config);
 
     // 引用服务商部署插件
     // eslint-disable-next-line security/detect-non-literal-require, @typescript-eslint/no-var-requires
     const Provider = require(config.provider.type);
-    const provider = new Provider();
+    const provider = new Provider(config.provider.config);
+
+    data.dependencies![config.provider.type as string] = loadNpmVersion(config.provider.type);
 
     // 部署云函数
     await provider.deploy(this.type, data, config);
 
     await next();
+  }
+
+  public async onMount (data: MountData, next: Next) {
+    const config = deepMerge(data.config.plugins[this.name || this.type]);
+    // 引用服务商部署插件
+    // eslint-disable-next-line security/detect-non-literal-require, @typescript-eslint/no-var-requires
+    const Provider = require(config.provider.type);
+    this.adapter = new Provider(config.provider.config);
+    await next();
+  }
+
+  public async onInvoke (data: InvokeData, next: Next) {
+    this.context = data.context;
+    await next();
+  }
+
+  public invoke (name: string, data?: any, options?: any) {
+    const context = {
+      event: data,
+      context: this.context
+    };
+    return this.adapter.invokeFunction(name, context, options);
   }
 }
