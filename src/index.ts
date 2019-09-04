@@ -20,6 +20,8 @@ export interface CloudFunctionConfig {
 export class CloudFunction implements Plugin {
   public readonly type: string;
   public name?: string;
+  public event: any;
+  public context: any;
   private config: {
     name?: string;
     memorySize?: number;
@@ -32,7 +34,6 @@ export class CloudFunction implements Plugin {
     [key: string]: any;
   };
   private adapter?: any;
-  private context?: any;
 
   /**
    * 创建云函数配置
@@ -80,11 +81,20 @@ export class CloudFunction implements Plugin {
   }
 
   public async onInvoke (data: InvokeData, next: Next) {
+    this.event = data.event;
     this.context = data.context;
     await next();
   }
 
-  public invoke (name: string, data?: any, options?: any) {
+  /**
+   * 异步触发云函数
+   * @param name {string} 云函数文件名或云函数名
+   * @param data {any} 参数
+   * @param options {object} 额外配置项
+   */
+  public invoke (name: string, data?: any, options?: {
+    [key: string]: any;
+  }): Promise<any> {
     if (!data) {
       data = Object.create(null);
     }
@@ -92,5 +102,23 @@ export class CloudFunction implements Plugin {
       data.context = this.context;
     }
     return this.adapter.invokeCloudFunction(name, data, options);
+  }
+
+  /**
+   * 同步调用云函数
+   * @param name {string} 云函数文件名或云函数名
+   * @param data {any} 参数
+   * @param options {object} 额外配置项
+   */
+  public invokeSync (name: string, data?: any, options?: {
+    [key: string]: any;
+  }): Promise<any> {
+    if (!data) {
+      data = Object.create(null);
+    }
+    if (typeof data === 'object') {
+      data.context = this.context;
+    }
+    return this.adapter.invokeSyncCloudFunction(name, data, options);
   }
 }
