@@ -93,7 +93,7 @@ export class CloudFunction implements Plugin {
 
   public async onMount (data: MountData, next: Next) {
     if (data.config['plugins'] && data.config.plugins[this.name || this.type]) {
-      this.config = deepMerge(this.config, data.config.plugins[this.name || this.type].config);
+      this.config = deepMerge({ config: this.config }, data.config.plugins[this.name || this.type]);
     }
     if (this.config.provider) {
       // eslint-disable-next-line security/detect-non-literal-require, @typescript-eslint/no-var-requires
